@@ -1,0 +1,122 @@
+init<-function(){
+	e<<-new.env()
+	e$stage<-0
+	e$width<-20
+	e$height<-20
+	e$step<-1/20
+	e$dir<-'none'
+	e$lastd<-'none'
+	e$head<-c(2,2)
+	e$lastx<-2
+	e$lasty<-2
+	e$tail<-data.frame(x=c(),y=c())
+	e$m<-matrix(0,20,20)
+	e$new<-F
+	
+	e$col.fruit<-2
+	e$col.head<-4
+	e$col.tail<-8
+	e$col.path<-0
+}
+
+index<-function(col){return(which(e$m==col))}
+
+stage1<-function(){
+	e$stage<-1
+	fruit<-function(){
+		if(length(index(e$col.fruit))<=0){
+			ind<-sample(index(e$col.path),1)
+			fx<-ifelse(ind&&20==0,10,ind%%20)
+			fy<-ceiling(ind/20)
+			e$m[fx,fy]<-e$col.fruit
+		}
+	}
+	fail<-function(){
+		if(length(which(e$head<1))>0 | length(which(e$head>20))>0){
+			print("game over")
+			keydown('q')
+			return(T)
+		}
+		if(e$m[e$head[1],e$head[2]]==e$col.tail){
+			print("game over")
+			keydown('q')
+			return(T)
+		}
+		return(F)
+	}
+	head<-function(){
+		e$lastx<-e$head[1]
+		e$lasty<-e$head[2]
+		if(e$dir=='up')e$head[2]<-e$head[2]+1
+		if(e$dir=='down')e$head[2]<-e$head[2]-1
+		if(e$dir=='left')e$head[1]<-e$head[1]-1
+		if(e$dir=='right')e$head[1]<-e$head[1]+1
+	}
+	body<-function(){
+		e$m[e$lastx,e$lasty]<-0
+		e$m[e$head[1],e$head[2]]<-e$col.head
+		if(length(index(e$col.fruit))<=0){
+			e$tail<-rbind(e$tail,c(e$lastx,e$lasty))
+		}
+		if(nrow(e$tail)>0){
+			e$tail<-rbind(e$tail,c(e$lastx,e$lasty))
+			e$m[e$tail[1,1],e$tail[1,2]]<-e$col.path
+			e$tail<-e$tail[-1,]
+			e$m[e$lastx,e$lasty]<-e$col.tail
+		}
+	}
+	drawTable<-function(){
+		plot(0,0,xlim=c(-0.025,1),ylim=c(-0.025,1),type='n',xaxs='i',yaxs='i')
+	}
+	drawMatrix<-function(){
+		ind<-which(e$m>0)
+		px<-(ifelse(ind%%20==0,20,ind%%20)-1)/20+e$step/2
+		py<-(ceiling(ind/20)-1)/20+e$step/20
+		pxy<-data.frame(x=px,y=py,col=e$m[ind])
+		points(pxy$x,pxy$y,col=pxy$col,pch=15,cex=2.5)
+	}
+	fruit()
+	head()
+	while(!fail()){
+		print(e$dir)
+		Sys.sleep(0.5)
+		body()
+		drawTable()
+		drawMatrix()	
+		if(e$new==F){
+			e$new==T
+			break
+		}		
+	}
+}
+stage0<-function(){
+	e$stage<-0
+}
+stage2<-function(){
+	e$stage<-2
+}
+keydown<-function(K){
+	if(e$stage==0){
+		init()
+		stage1()
+		return(NULL)
+	}
+	else if(e$stage==2){
+		return(NULL)
+	}
+	else if(e$stage==1){
+		if(tolower(K)%in%c('up','down','right','left')){
+			e$new<-F
+			e$dir<-tolower(K)
+			stage1()
+		}
+	}
+	return(NULL)
+}
+run<-function(){
+	e<<-new.env()
+	x11()
+	stage0()
+	getGraphicsEvent(prompt="123",onKeybd=keydown)
+}
+run()
